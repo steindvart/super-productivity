@@ -12,6 +12,8 @@
   :globe_with_meridians: <a href="https://app.super-productivity.com">Open Web App</a> or :computer: <a href="https://github.com/super-productivity/super-productivity/releases">Download</a>
 </p>
 
+<br/>
+
 <!-- The <a> and <img> elements are intentionally made without space.
      Because of the extra whitespace characters in <a>, makes blue underline lines appear for them.
      Please do not change this formatting, so as not to make them.
