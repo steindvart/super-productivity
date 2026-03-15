@@ -48,6 +48,7 @@ export const DEFAULT_JIRA_CFG: JiraCfg = {
 // export const JIRA_INITIAL_POLL_DELAY = 5000;
 
 export const JIRA_POLL_INTERVAL = 5 * 60 * 1000;
+// eslint-disable-next-line no-mixed-operators
 export const JIRA_INITIAL_POLL_DELAY = 8 * 1000 + 4000;
 export const JIRA_INITIAL_POLL_BACKLOG_DELAY = JIRA_INITIAL_POLL_DELAY + 10000;
 
