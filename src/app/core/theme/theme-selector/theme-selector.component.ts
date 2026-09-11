@@ -75,7 +75,10 @@ const valueToRef = (value: string): CustomThemeRef => {
           [hideSingleSelectionIndicator]="true"
           (change)="updateDarkMode($event)"
         >
-          <mat-button-toggle value="system">
+          <mat-button-toggle
+            value="system"
+            [class.is-selected]="globalThemeService.darkMode() === 'system'"
+          >
             <span class="dark-mode-toggle__content">
               <mat-icon>computer</mat-icon>
               <span class="dark-mode-toggle__label">
@@ -83,7 +86,10 @@ const valueToRef = (value: string): CustomThemeRef => {
               </span>
             </span>
           </mat-button-toggle>
-          <mat-button-toggle value="dark">
+          <mat-button-toggle
+            value="dark"
+            [class.is-selected]="globalThemeService.darkMode() === 'dark'"
+          >
             <span class="dark-mode-toggle__content">
               <mat-icon>dark_mode</mat-icon>
               <span class="dark-mode-toggle__label">
@@ -91,7 +97,10 @@ const valueToRef = (value: string): CustomThemeRef => {
               </span>
             </span>
           </mat-button-toggle>
-          <mat-button-toggle value="light">
+          <mat-button-toggle
+            value="light"
+            [class.is-selected]="globalThemeService.darkMode() === 'light'"
+          >
             <span class="dark-mode-toggle__content">
               <mat-icon>light_mode</mat-icon>
               <span class="dark-mode-toggle__label">
@@ -232,16 +241,15 @@ const valueToRef = (value: string): CustomThemeRef => {
         --mat-button-toggle-shape: var(--input-border-radius);
 
         /*
-         * Selection reads the same way the settings tab strip marks its active
-         * tab: the --state-selected fill plus the theme's primary on the icon.
-         * Unselected options sit transparent on the card so the tint actually
-         * shows — against Material's own group fill (#424242 dark, white light)
-         * the same 10% overlay is barely a shade apart.
+         * The selected option gets the --state-selected fill, like the active
+         * settings tab; the underline below adds the shape cue. Unselected
+         * options sit transparent on the card so the tint actually shows —
+         * against Material's own group fill (#424242 dark, white light) the
+         * same 10% overlay is barely a shade apart.
          *
-         * Both values come from the design system rather than Material's
-         * defaults for these tokens, which are hardcoded black/white alphas
-         * and so ignore the active theme. --state-selected is built from
-         * --ink-on-channel and --c-primary from the palette, so the control
+         * Design-system values rather than Material's defaults for these
+         * tokens, which are hardcoded black/white alphas and so ignore the
+         * active theme; --state-selected is built from --ink-on-channel and
          * tracks every theme, custom ones included.
          */
         --mat-button-toggle-background-color: transparent;
@@ -285,15 +293,29 @@ const valueToRef = (value: string): CustomThemeRef => {
       }
 
       /*
-       * Only the icon takes the accent, not the label. The tab strip this
-       * mirrors is icon-only at the widths where it is the reference, so
-       * tinting its label was never part of the pattern — and the palette blue
-       * lands at 2.4:1 on the light card, well under the 4.5:1 a word like
-       * "Dark" needs to stay readable. The label keeps --text-color (11.2:1)
-       * and the icon reads as an accent on top of the fill, which is what
-       * actually carries the selection.
+       * The selected option is marked like the active settings tab: a
+       * full-width 2px underline. The fill and icon tint alone are colour-only
+       * cues too faint to identify the state; the bar adds the shape cue. It
+       * is an inset shadow, so it takes no layout space and is clipped by the
+       * group's rounded corners.
+       *
+       * The tab indicator is plain --brand, which works there because the tab
+       * sits on the bare page. Here the bar touches the selected fill and the
+       * group border instead, and on the light card --brand lands at 2.6:1
+       * against both — under the 3:1 a state indicator needs. Mixing a fifth
+       * of --text-color in pushes it away from the surface in either mode
+       * (3.4:1 light, 5.3:1 dark) while keeping the tab hue.
+       *
+       * Keyed off a component-owned class rather than Material's
+       * mat-button-toggle-checked state class. Only the icon takes the
+       * accent colour: the palette blue sits well under the contrast a label
+       * needs, so the label keeps --text-color.
        */
-      .dark-mode-toggle .mat-button-toggle-checked mat-icon {
+      .dark-mode-toggle mat-button-toggle.is-selected {
+        box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--brand) 80%, var(--text-color));
+      }
+
+      .dark-mode-toggle mat-button-toggle.is-selected mat-icon {
         color: var(--c-primary);
       }
 
