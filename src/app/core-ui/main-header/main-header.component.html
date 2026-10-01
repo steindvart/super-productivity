@@ -131,6 +131,7 @@
             (click)="onSyncButtonClick()"
             (longPress)="setupSync()"
             (contextmenu)="$event.preventDefault(); setupSync()"
+            [attr.data-sync-confirmation]="syncConfirmation()"
             mat-icon-button
           >
             @if (syncIsEnabledAndReady()) {

@@ -211,6 +211,16 @@ export class MainHeaderComponent implements OnDestroy {
     }
     return T.MH.TRIGGER_SYNC;
   });
+  // Test hook for the E2E sync helpers, which wait on these states. 'local':
+  // every local change is uploaded. 'remote': the remote was also checked
+  // within the last minute. Deliberately independent of the spinner and the
+  // error state, as the checkmark badges are.
+  syncConfirmation = computed(() => {
+    if (!this.syncIsEnabledAndReady() || !this.isOnline() || !this.hasNoPendingOps()) {
+      return null;
+    }
+    return this.superSyncIsConfirmedInSync() ? 'remote' : 'local';
+  });
   readonly isTimeTrackingEnabled = computed(() => {
     return this.globalConfigService.appFeatures().isTimeTrackingEnabled;
   });

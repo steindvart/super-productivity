@@ -419,6 +419,13 @@ describe('MainHeaderComponent action placement', () => {
   let pluginSidePanelButtons = signal<unknown[]>([]);
   let currentTaskId = signal<string | null>(null);
   let isShowNotes = signal(false);
+  let syncWrapperState = {
+    isEnabledAndReady: false,
+    syncState: 'IN_SYNC',
+    isSyncInProgress: false,
+    hasNoPendingOps: true,
+    isConfirmedInSync: false,
+  };
 
   const configureTestBed = (): void => {
     const cfg = {
@@ -482,11 +489,11 @@ describe('MainHeaderComponent action placement', () => {
           provide: SyncWrapperService,
           useValue: {
             sync: jasmine.createSpy('sync'),
-            isEnabledAndReady$: of(false),
-            syncState$: of('IN_SYNC'),
-            isSyncInProgress$: of(false),
-            hasNoPendingOps$: of(true),
-            superSyncIsConfirmedInSync$: of(false),
+            isEnabledAndReady$: of(syncWrapperState.isEnabledAndReady),
+            syncState$: of(syncWrapperState.syncState),
+            isSyncInProgress$: of(syncWrapperState.isSyncInProgress),
+            hasNoPendingOps$: of(syncWrapperState.hasNoPendingOps),
+            superSyncIsConfirmedInSync$: of(syncWrapperState.isConfirmedInSync),
           },
         },
         {
@@ -558,6 +565,13 @@ describe('MainHeaderComponent action placement', () => {
     pluginSidePanelButtons = signal<unknown[]>([]);
     currentTaskId = signal<string | null>(null);
     isShowNotes = signal(false);
+    syncWrapperState = {
+      isEnabledAndReady: false,
+      syncState: 'IN_SYNC',
+      isSyncInProgress: false,
+      hasNoPendingOps: true,
+      isConfirmedInSync: false,
+    };
   });
 
   afterEach(() => {
@@ -906,6 +920,46 @@ describe('MainHeaderComponent action placement', () => {
     await mountAtWidth(404);
 
     expect(fixture!.componentInstance.isAnyCounterRunning()).toBe(true);
+  });
+
+  describe('sync button state', () => {
+    const readySync = (patch: Partial<typeof syncWrapperState> = {}): void => {
+      syncWrapperState = {
+        ...syncWrapperState,
+        isEnabledAndReady: true,
+        ...patch,
+      };
+    };
+
+    it('reports a local upload until the remote was checked', () => {
+      readySync({ hasNoPendingOps: true, isConfirmedInSync: false });
+
+      component = createComponent();
+
+      expect(component.syncConfirmation()).toBe('local');
+    });
+
+    it('reports a remote-confirmed upload', () => {
+      readySync({ hasNoPendingOps: true, isConfirmedInSync: true });
+
+      component = createComponent();
+
+      expect(component.syncConfirmation()).toBe('remote');
+    });
+
+    it('reports no upload state while local changes wait for upload', () => {
+      readySync({ hasNoPendingOps: false });
+
+      component = createComponent();
+
+      expect(component.syncConfirmation()).toBeNull();
+    });
+
+    it('reports no upload state while sync is not ready', () => {
+      component = createComponent();
+
+      expect(component.syncConfirmation()).toBeNull();
+    });
   });
 
   it('keeps a persistent recovery action instead of showing routine sync success', async () => {
