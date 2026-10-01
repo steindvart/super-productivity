@@ -977,6 +977,49 @@ describe('MainHeaderComponent action placement', () => {
 
       expect(component.syncTooltip()).toBe(T.MH.SYNC_STATE.IN_SYNC);
     });
+
+    it('shows the in-sync state as one glyph, with nothing drawn over it (#10427)', async () => {
+      readySync({ hasNoPendingOps: true });
+
+      const host = await mountAtWidth(1200);
+      const icons = host.querySelectorAll('button.sync-btn mat-icon');
+
+      expect(icons.length).toBe(1);
+      expect(icons[0].textContent?.trim()).toBe('cloud_done');
+    });
+
+    it('shows the plain sync glyph while local changes wait for upload', () => {
+      readySync({ hasNoPendingOps: false });
+
+      component = createComponent();
+
+      expect(component.syncIcon()).toBe('sync');
+      expect(component.isSyncIconSpinning()).toBe(false);
+    });
+
+    it('spins the sync glyph while syncing, even with nothing left to upload', () => {
+      readySync({ isSyncInProgress: true, hasNoPendingOps: true });
+
+      component = createComponent();
+
+      expect(component.syncIcon()).toBe('sync');
+      expect(component.isSyncIconSpinning()).toBe(true);
+    });
+
+    it('lets an error win over syncing, and never spins the error glyph', () => {
+      readySync({ syncState: 'ERROR', isSyncInProgress: true });
+
+      component = createComponent();
+
+      expect(component.syncIcon()).toBe('sync_problem');
+      expect(component.isSyncIconSpinning()).toBe(false);
+    });
+
+    it('shows sync_disabled while sync is not ready', () => {
+      component = createComponent();
+
+      expect(component.syncIcon()).toBe('sync_disabled');
+    });
   });
 
   it('keeps a persistent recovery action instead of showing routine sync success', async () => {
