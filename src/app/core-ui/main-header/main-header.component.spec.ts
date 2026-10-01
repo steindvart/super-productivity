@@ -31,6 +31,7 @@ import { MetricService } from '../../features/metric/metric.service';
 import { DateService } from '../../core/date/date.service';
 import { DEFAULT_GLOBAL_CONFIG } from '../../features/config/default-global-config.const';
 import { SyncStatus } from '../../op-log/sync-exports';
+import { T } from '../../t.const';
 import {
   SimpleCounter,
   SimpleCounterType,
@@ -959,6 +960,22 @@ describe('MainHeaderComponent action placement', () => {
       component = createComponent();
 
       expect(component.syncConfirmation()).toBeNull();
+    });
+
+    it('names a recent remote check in the tooltip', () => {
+      readySync({ hasNoPendingOps: true, isConfirmedInSync: true });
+
+      component = createComponent();
+
+      expect(component.syncTooltip()).toBe(T.MH.SYNC_STATE.IN_SYNC_CONFIRMED);
+    });
+
+    it('keeps the plain in-sync tooltip until the remote was checked', () => {
+      readySync({ hasNoPendingOps: true, isConfirmedInSync: false });
+
+      component = createComponent();
+
+      expect(component.syncTooltip()).toBe(T.MH.SYNC_STATE.IN_SYNC);
     });
   });
 
