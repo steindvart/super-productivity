@@ -7,6 +7,7 @@ import {
 } from '@playwright/test';
 import { BasePage } from './base.page';
 import { WEBDAV_SYNC_FORMAT } from '../utils/sync-helpers';
+import { cssSelectors } from '../constants/selectors';
 
 type SyncCycleIntent = 'any' | 'read' | 'write';
 
@@ -38,12 +39,10 @@ export class SyncPage extends BasePage {
     this.syncFolderInput = page.locator('.e2e-syncFolderPath input');
     this.saveBtn = page.locator('mat-dialog-actions button[mat-flat-button]');
     this.syncSpinner = page.locator('.sync-btn mat-icon.spin');
-    // The button carries the upload state as a data attribute: 'local' once
-    // every local change is uploaded, 'remote' once the server was checked too.
-    this.syncCheckIcon = page.locator('button.sync-btn[data-sync-confirmation]');
-    this.syncConfirmedIcon = page.locator(
-      'button.sync-btn[data-sync-confirmation="remote"]',
-    );
+    // Every local change uploaded / the server checked too. Both selectors
+    // also match the badge that released clients render.
+    this.syncCheckIcon = page.locator(cssSelectors.SYNC_UPLOADED);
+    this.syncConfirmedIcon = page.locator(cssSelectors.SYNC_REMOTE_CONFIRMED);
     this.syncErrorIcon = page
       .locator('.sync-btn mat-icon')
       .filter({ hasText: 'sync_problem' });

@@ -9,6 +9,7 @@ import {
 import { BasePage } from './base.page';
 import { normalizeDialogMessage, translationRegex } from '../utils/i18n-strings';
 import { confirmSyncConflictOverwriteIfShown } from '../utils/sync-helpers';
+import { cssSelectors } from '../constants/selectors';
 
 export interface SuperSyncConfig {
   baseUrl: string;
@@ -214,12 +215,10 @@ export class SuperSyncPage extends BasePage {
     this.encryptionPasswordInput = page.locator('.e2e-encryptKey input[type="password"]');
     this.saveBtn = page.locator('mat-dialog-actions button[mat-flat-button]');
     this.syncSpinner = page.locator('.sync-btn mat-icon.spin');
-    // The button carries the upload state as a data attribute: 'local' once
-    // every local change is uploaded, 'remote' once the server was checked too.
-    this.syncCheckIcon = page.locator('button.sync-btn[data-sync-confirmation]');
-    this.syncConfirmedIcon = page.locator(
-      'button.sync-btn[data-sync-confirmation="remote"]',
-    );
+    // Every local change uploaded / the server checked too. Both selectors
+    // also match the badge that released clients render.
+    this.syncCheckIcon = page.locator(cssSelectors.SYNC_UPLOADED);
+    this.syncConfirmedIcon = page.locator(cssSelectors.SYNC_REMOTE_CONFIRMED);
     // Error state shows sync_problem icon (no special class, just the icon name)
     this.syncErrorIcon = page.locator('.sync-btn mat-icon:has-text("sync_problem")');
     // Legacy Angular fresh-client dialog elements. Keep this locator scoped so a
