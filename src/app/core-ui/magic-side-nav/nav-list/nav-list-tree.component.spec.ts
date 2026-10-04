@@ -161,4 +161,27 @@ describe('NavListTreeComponent expand/collapse animation', () => {
     await new Promise((resolve) => setTimeout(resolve));
     expect(getChildrenEl()).toBeNull();
   });
+
+  it('clips the list and shrinks its margins while collapsing', () => {
+    getTree().onHeaderClick();
+    fixture.componentInstance.isExpanded.set(false);
+    fixture.detectChanges();
+
+    const leavingEl = getChildrenEl()!;
+    const [animation] = leavingEl.getAnimations();
+    const duration = animation.effect!.getComputedTiming().duration as number;
+    const sampleAt = (progress: number): CSSStyleDeclaration => {
+      animation.currentTime = duration * progress;
+      return getComputedStyle(leavingEl);
+    };
+
+    // overflow is discrete: if it changed between keyframes it would flip at
+    // 50% and let the items spill over the content below until then.
+    expect(sampleAt(0.25).overflow).toBe('hidden');
+    expect(sampleAt(0.75).overflow).toBe('hidden');
+
+    // Margins that outlive the height make the content below jump on removal.
+    const end = sampleAt(0.999);
+    expect(parseFloat(end.marginTop) + parseFloat(end.marginBottom)).toBeLessThan(0.5);
+  });
 });
