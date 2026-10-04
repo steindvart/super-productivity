@@ -65,6 +65,12 @@ export const getProjectVisibilityIconColor = (project: Project): string | null =
   styleUrls: ['./nav-list-tree.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [expandCollapseAni],
+  // Bound on the host, not on the animated list: collapsing destroys the list
+  // in the same change detection pass that enables the animation, so a binding
+  // on the list itself never updates and :leave would be skipped (#10471).
+  host: {
+    ['[@.disabled]']: '!shouldAnimateExpandCollapse()',
+  },
 })
 export class NavListTreeComponent implements OnDestroy {
   private readonly _navConfigService = inject(MagicNavConfigService);
