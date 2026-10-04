@@ -817,6 +817,24 @@ IDs deduplicate ops still in the local log, while vector clocks carry causality.
    committed revision (#10239). The next cycle downloads/applies that baseline
    before retrying; rejection does not acknowledge local ops, write the file, or
    advance the cursor. Warm-cache uploads retain the conditional PUT check.
+   V2 and v3 ops uploads only extend a file this client applied, with or without
+   retained ops: an unapplied migration probe or a cold read without a matching
+   committed revision defers before dedup acknowledgements or compaction
+   (#10395). An applied cycle cache also permits healing a corrupt primary from
+   its backup. A snapshot-only file (for example another device's `SYNC_IMPORT`
+   seed) appearing after this client's download must be loaded first. Full-state
+   snapshot uploads still write unconditionally (except REPAIR), so a device answering an empty download
+   with its own `SYNC_IMPORT` can still replace a seed that landed after its
+   check. Format migration can publish the equivalent v3 representation first;
+   a subsequent download/apply permits pending operations to append safely.
+   Browser coverage in `webdav-stale-monolith.spec.ts` exercises encrypted/plain
+   v3 and compaction at the real buffer cap, including fresh-client restart.
+   `webdav-upgrade-baseline.spec.ts` removes only `lastSeenClocks` from persisted
+   adapter metadata: v2/v3 must retain baseline content when a replacement plus
+   tail masks the counter reset, while an already hydrated base and a pending
+   backup restore retain their normal behavior (#10469/#10478). Dropbox/OneDrive
+   have no browser harness; their unchanged-revision upgrade prechecks run
+   through the adapter's provider transport seam in its focused specs.
    Legacy ops without `sv` use the file's
    `syncVersion` as a conservative upper bound. After local compaction prunes
    such an op's applied ID, a later file write advances this upper bound past
@@ -852,11 +870,16 @@ IDs deduplicate ops still in the local log, while vector clocks carry causality.
    rule: an upload that finds an unseen base is refused as a retryable
    conflict, so a stale client cannot append to a replacement it never
    hydrated (in v2, overwriting its snapshot with stale state). Before the
-   first recorded clock (e.g. the first sync after upgrading) neither check
-   runs: there is no baseline to judge by, a forced seq-0 download would show
-   a conflict dialog whenever local ops are pending, and a refused upload
-   could stay refused behind the rev pre-check. A replacement that lands in
-   that window goes unnoticed (known gap, #10258).
+   first recorded clock (e.g. the first sync after upgrading) the reader
+   judges the base by its op-log vector clock instead: every snapshot it
+   hydrated or wrote is merged into that clock, so an uncovered base is one it
+   never loaded, and pending local ops alone do not flag it (#10258). It skips
+   the check while a local full-state op is unsynced: a backup restore or
+   clean slate resets the clock to a fresh client id, and that op's upload
+   replaces the remote anyway. The writer check still needs a recorded clock; a sync cycle downloads before it
+   uploads, so the reader check runs first. The rev pre-check also waits for a
+   recorded clock, so that first sync reads the file once and commits its
+   clock.
    This optional metadata requires no schema bump: older readers ignore it,
    but older writers can omit it. Masked dominating replacements written by,
    or subsequently rewritten by, those clients remain a mixed-version gap;

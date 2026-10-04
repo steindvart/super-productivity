@@ -120,6 +120,7 @@ import {
   fieldPatchGroups,
   keptLocalTimeDeltas,
   rebaseKeptTimeDeltas,
+  timeDeltasSurvivingRemoteWins,
   buildSurvivingFieldPatches,
 } from './conflict-field-patch.util';
 import { RECREATE_FALLBACK } from '../core/recreate-fallback.const';
@@ -1029,10 +1030,16 @@ export class ConflictResolutionService {
       ...additionalLocalIntentOps,
     ]);
     const { remoteWinnerAffectedEntityKeys } = lwwPartitions;
-    const localOpsToReject = [...new Set(lwwPartitions.localOpsToReject)];
+    // A patched conflict's local time deltas stay pending (rebased in STEP 3b),
+    // and so do those beside a remote winner that writes no time (#10378).
+    const keptDeltas = keptLocalTimeDeltas([
+      ...mergedResolutions.map((m) => m.conflict),
+      ...timeDeltasSurvivingRemoteWins(resolutions, this._resolvePayloadKey('TASK')),
+    ]);
+    const localOpsToReject = [...new Set(lwwPartitions.localOpsToReject)].filter(
+      (opId) => !keptDeltas.opIds.has(opId),
+    );
     const localOpsToRejectSet = new Set(localOpsToReject);
-    // A patched conflict's local time deltas stay pending (rebased in STEP 3b).
-    const keptDeltas = keptLocalTimeDeltas(mergedResolutions.map((m) => m.conflict));
     const protectedLocalResolutionOpIds = new Set<string>(keptDeltas.opIds);
     const pending = await this.opLogStore.getUnsyncedByEntity();
     const keptReorders = keptCommutingReorders(conflicts, pending, nonConflictingOps);
@@ -1622,7 +1629,7 @@ export class ConflictResolutionService {
         }
       }
     }
-    if (mergedResolutions.length > 0) {
+    if (keptDeltas.opIds.size > 0) {
       await rebaseKeptTimeDeltas(this.opLogStore, keptDeltas, writtenResendIds);
     }
 
@@ -1939,8 +1946,11 @@ export class ConflictResolutionService {
 
   /**
    * Shows a dismissible banner naming the tasks whose edits diverged and were
-   * auto-resolved by keeping the most recent version. Uses the banner's built-in
-   * dismiss button — no custom action needed.
+   * auto-resolved by keeping the most recent version. The only button is a
+   * confirming "OK" instead of the built-in dismiss: the shared `G.DISMISS`
+   * label reads as "reject" in some locales (e.g. ru "Отклонить"), suggesting
+   * the click undoes the resolution (#10481). Clicking only closes the banner;
+   * the resolved data stays as is.
    *
    * Titles are user content escaped before display: the banner renders via
    * `[innerHTML]` and titles come from synced remote data, so Angular's own
@@ -1965,6 +1975,12 @@ export class ConflictResolutionService {
       ico: 'sync_problem',
       msg: T.F.SYNC.B.CONTENT_CONFLICT_RESOLVED,
       translateParams: { taskList },
+      isHideDismissBtn: true,
+      action: {
+        label: T.G.OK,
+        // The banner component dismisses before calling fn; nothing else to do.
+        fn: () => {},
+      },
     });
   }
 
@@ -2554,14 +2570,16 @@ export class ConflictResolutionService {
   }
 
   /**
-   * Resolves an entity's conflicts as ONE field patch built only from both
-   * sides' ops (conflict-field-patch.util.ts), or returns undefined for the
-   * whole-entity LWW path. Its timestamp is the max of both sides and its
-   * clock dominates both, so two resolvers of the same sides build identical
-   * payloads, which meet as ordinary LWW rows and never re-merge (#10393
-   * decision 5). Types without a RECREATE_FALLBACK (NOTE, decision 4) are
-   * refused: a receiver that applied a concurrent delete recreates the entity
-   * from the partial patch (accepted residual, decision 2).
+   * Resolves an entity's conflicts per field (conflict-field-patch.util.ts,
+   * #10422), or returns undefined for the whole-entity LWW path. The remote
+   * ops apply as themselves; the re-sends are the local fields whose latest
+   * local write is newer than every remote write of the same field
+   * (`localWinningFieldGroups`), one `'patch'` row per local op that wrote
+   * them, each at that op's own timestamp. Each row's clock dominates both
+   * sides and the one before it. Rows never re-merge (#10393 decision 5).
+   * Types without a RECREATE_FALLBACK (NOTE, decision 4) are refused: a
+   * receiver that applied a concurrent delete recreates the entity from the
+   * partial patch (accepted residual, decision 2).
    */
   private async _tryCreateFieldPatch(
     entityPlans: LwwConflictResolutionPlan<EntityConflict>[],
@@ -4350,14 +4368,11 @@ export class ConflictResolutionService {
     // convergent, while a whole-entity LWW winner would discard the loser's
     // fields fleet-wide. An overlapping crossing is forwarded: the device
     // whose side wins resolves it with a field patch (`_tryCreateFieldPatch`).
-    if (
-      isDisjointMergeEligible({
-        localOps,
-        remoteOps: [remoteOp],
-        payloadKey,
-        entityId,
-      })
-    ) {
+    // Time deltas commute as on the pending path, also beside the auto-plan
+    // that tracking an unscheduled task emits: a local win here would emit a
+    // snapshot whose clock claims the remote delta without its time.
+    const sides = { localOps, remoteOps: [remoteOp], payloadKey, entityId };
+    if (isDisjointMergeEligible(sides) || isCommutingTimeDeltaCrossing(sides)) {
       return null;
     }
 
