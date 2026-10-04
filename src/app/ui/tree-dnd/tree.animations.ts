@@ -1,5 +1,5 @@
 import { animate, style, transition, trigger } from '@angular/animations';
-import { TREE_CONSTANTS } from './tree-constants';
+import { TRANSITION_DURATION_M } from '../animations/animation.const';
 
 // Vertical margins collapse with the height so the content below does not jump
 // when the element is inserted or removed. Overflow stays hidden in every
@@ -21,10 +21,10 @@ const EXPANDED = style({
 export const expandCollapseAni = trigger('expandCollapse', [
   transition(':enter', [
     COLLAPSED,
-    animate(`${TREE_CONSTANTS.ANIMATION_DURATION}ms ease-in-out`, EXPANDED),
+    animate(`${TRANSITION_DURATION_M} ease-in-out`, EXPANDED),
   ]),
   transition(':leave', [
     EXPANDED,
-    animate(`${TREE_CONSTANTS.ANIMATION_DURATION}ms ease-in-out`, COLLAPSED),
+    animate(`${TRANSITION_DURATION_M} ease-in-out`, COLLAPSED),
   ]),
 ]);
