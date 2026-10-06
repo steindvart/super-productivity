@@ -328,6 +328,22 @@ export class PluginManagementComponent {
   }
 
   async clearPluginCache(): Promise<void> {
+    // Counts the same plugins clearUploadedPluginsFromMemory removes. With none
+    // installed, nothing visible is lost, so the cache is cleared without asking.
+    const uploadedCount = Array.from(this._pluginService.pluginStates().values()).filter(
+      (state) => state.type === 'uploaded',
+    ).length;
+    if (
+      uploadedCount > 0 &&
+      !confirmDialog(
+        this._translateService.instant(T.PLUGINS.CONFIRM_CLEAR_CACHE, {
+          count: uploadedCount,
+        }),
+      )
+    ) {
+      return;
+    }
+
     try {
       this.isUploading.set(true);
       this.uploadError.set(null);
