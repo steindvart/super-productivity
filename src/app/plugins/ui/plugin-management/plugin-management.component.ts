@@ -515,11 +515,12 @@ export class PluginManagementComponent {
       }
     } catch (error) {
       PluginLog.err('Failed to open config dialog:', error);
-      // Show error to user
-      this.uploadError.set(
+      // A snack, not `uploadError`: that one renders in the "Install Plugin" card,
+      // far from the plugin whose settings button was clicked.
+      this._snackService.open(
         error instanceof Error
-          ? error.message
-          : this._translateService.instant(T.PLUGINS.FAILED_TO_LOAD_CONFIG),
+          ? { type: 'ERROR', msg: error.message, isSkipTranslate: true }
+          : { type: 'ERROR', msg: T.PLUGINS.FAILED_TO_LOAD_CONFIG },
       );
     }
   }
