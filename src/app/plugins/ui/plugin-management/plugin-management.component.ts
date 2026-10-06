@@ -38,6 +38,9 @@ import { CollapsibleComponent } from '../../../ui/collapsible/collapsible.compon
 import { LanguageCode } from '../../../core/locale.constants';
 import { GlobalConfigService } from '../../../features/config/global-config.service';
 import { confirmDialog } from '../../../util/native-dialogs';
+import { escapeHtml } from '../../../util/escape-html';
+import { DialogConfirmComponent } from '../../../ui/dialog-confirm/dialog-confirm.component';
+import { firstValueFrom } from 'rxjs';
 import { Store } from '@ngrx/store';
 import { Router } from '@angular/router';
 import { selectAll as selectAllIssueProviders } from '../../../features/issue/store/issue-provider.selectors';
@@ -335,11 +338,11 @@ export class PluginManagementComponent {
     ).length;
     if (
       uploadedCount > 0 &&
-      !confirmDialog(
-        this._translateService.instant(T.PLUGINS.CONFIRM_CLEAR_CACHE, {
-          count: uploadedCount,
-        }),
-      )
+      !(await this._confirmInDialog(
+        T.PLUGINS.CONFIRM_CLEAR_CACHE,
+        { count: uploadedCount },
+        T.PLUGINS.CLEAR_PLUGIN_CACHE,
+      ))
     ) {
       return;
     }
@@ -376,12 +379,13 @@ export class PluginManagementComponent {
   }
 
   async removeUploadedPlugin(plugin: PluginInstance): Promise<void> {
+    // The name comes from the uploaded ZIP and the dialog renders the message as HTML.
     if (
-      !confirmDialog(
-        this._translateService.instant(T.PLUGINS.CONFIRM_REMOVE, {
-          name: plugin.manifest.name,
-        }),
-      )
+      !(await this._confirmInDialog(
+        T.PLUGINS.CONFIRM_REMOVE,
+        { name: escapeHtml(plugin.manifest.name) },
+        T.PLUGINS.REMOVE,
+      ))
     ) {
       return;
     }
@@ -403,6 +407,23 @@ export class PluginManagementComponent {
     } finally {
       this.isUploading.set(false);
     }
+  }
+
+  /** Resolves true only for the OK button; Cancel, Esc and backdrop resolve false. */
+  private async _confirmInDialog(
+    message: string,
+    translateParams: Record<string, string | number>,
+    okTxt: string,
+  ): Promise<boolean> {
+    const result = await firstValueFrom(
+      this._dialog
+        .open(DialogConfirmComponent, {
+          restoreFocus: true,
+          data: { message, translateParams, okTxt },
+        })
+        .afterClosed(),
+    );
+    return result === true;
   }
 
   getPluginDescription(plugin: PluginInstance): string {

@@ -3,7 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslateModule } from '@ngx-translate/core';
+import { of } from 'rxjs';
 import { GlobalConfigService } from '../../../features/config/global-config.service';
 import { SnackService } from '../../../core/snack/snack.service';
 import { LayoutService } from '../../../core-ui/layout/layout.service';
@@ -11,11 +12,12 @@ import { PluginBridgeService } from '../../plugin-bridge.service';
 import { PluginCacheService } from '../../plugin-cache.service';
 import { PluginConfigService } from '../../plugin-config.service';
 import { PluginMetaPersistenceService } from '../../plugin-meta-persistence.service';
-import { PluginManifest, PluginHooks } from '../../plugin-api.model';
+import { PluginInstance, PluginManifest, PluginHooks } from '../../plugin-api.model';
 import { PluginService } from '../../plugin.service';
 import { PluginState } from '../../plugin-state.model';
 import { PluginManagementComponent } from './plugin-management.component';
 import { T } from '../../../t.const';
+import { DialogConfirmComponent } from '../../../ui/dialog-confirm/dialog-confirm.component';
 
 type PluginManifestWithAuthor = PluginManifest & { author?: string };
 
@@ -282,8 +284,17 @@ describe('PluginManagementComponent', () => {
     expect(layoutToggleSpy).not.toHaveBeenCalled();
   });
 
+  // Stubs MatDialog.open so the confirm dialog closes with `result`:
+  // true = confirmed, false = Cancel, undefined = Esc or backdrop click.
+  const stubConfirmDialog = (result: boolean | undefined): jasmine.Spy => {
+    const openSpy = jasmine
+      .createSpy('open')
+      .and.returnValue({ afterClosed: () => of(result) });
+    Object.assign(TestBed.inject(MatDialog), { open: openSpy });
+    return openSpy;
+  };
+
   describe('clearPluginCache', () => {
-    let confirmSpy: jasmine.Spy;
     let clearCacheSpy: jasmine.Spy;
     let clearUploadedSpy: jasmine.Spy;
     let pluginStates: WritableSignal<Map<string, PluginState>>;
@@ -297,8 +308,6 @@ describe('PluginManagementComponent', () => {
     });
 
     beforeEach(() => {
-      // test.ts installs window.confirm as a global spy that returns true.
-      confirmSpy = window.confirm as jasmine.Spy;
       clearCacheSpy = jasmine.createSpy('clearCache').and.resolveTo();
       clearUploadedSpy = jasmine
         .createSpy('clearUploadedPluginsFromMemory')
@@ -316,48 +325,117 @@ describe('PluginManagementComponent', () => {
           ['uploaded-b', stateFor('uploaded-b', 'uploaded')],
         ]),
       );
-      const translate = TestBed.inject(TranslateService);
-      translate.setTranslation('en', {
-        PLUGINS: { CONFIRM_CLEAR_CACHE: 'Remove uploaded plugins ({{count}})?' },
-      });
-      translate.use('en');
     });
 
     afterEach(() => {
-      // Restore the global default so later specs are not affected.
-      confirmSpy.and.returnValue(true);
       // Plugin cards are not under test and need service methods this mock lacks.
       pluginStates.set(new Map());
     });
 
-    it('asks for confirmation with the number of uploaded plugins', async () => {
-      confirmSpy.and.returnValue(true);
+    it('asks in the app dialog with the number of uploaded plugins, then clears', async () => {
+      const openSpy = stubConfirmDialog(true);
 
       await component.clearPluginCache();
 
-      expect(confirmSpy).toHaveBeenCalledOnceWith('Remove uploaded plugins (2)?');
+      expect(openSpy).toHaveBeenCalledOnceWith(DialogConfirmComponent, {
+        restoreFocus: true,
+        data: {
+          message: T.PLUGINS.CONFIRM_CLEAR_CACHE,
+          translateParams: { count: 2 },
+          okTxt: T.PLUGINS.CLEAR_PLUGIN_CACHE,
+        },
+      });
       expect(clearCacheSpy).toHaveBeenCalledTimes(1);
       expect(clearUploadedSpy).toHaveBeenCalledTimes(1);
     });
 
     it('removes nothing when the user cancels', async () => {
-      confirmSpy.and.returnValue(false);
+      const openSpy = stubConfirmDialog(false);
 
       await component.clearPluginCache();
 
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(clearCacheSpy).not.toHaveBeenCalled();
+      expect(clearUploadedSpy).not.toHaveBeenCalled();
+    });
+
+    it('removes nothing when the dialog is dismissed with Esc or the backdrop', async () => {
+      const openSpy = stubConfirmDialog(undefined);
+
+      await component.clearPluginCache();
+
+      expect(openSpy).toHaveBeenCalledTimes(1);
       expect(clearCacheSpy).not.toHaveBeenCalled();
       expect(clearUploadedSpy).not.toHaveBeenCalled();
     });
 
     it('clears the cache without asking when no uploaded plugin is installed', async () => {
+      const openSpy = stubConfirmDialog(true);
       pluginStates.set(new Map([['bundled', stateFor('bundled', 'built-in')]]));
 
       await component.clearPluginCache();
 
-      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
       expect(clearCacheSpy).toHaveBeenCalledTimes(1);
       expect(clearUploadedSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('removeUploadedPlugin', () => {
+    let removeSpy: jasmine.Spy;
+
+    const uploadedPlugin = (name: string): PluginInstance => ({
+      manifest: { ...baseManifest, id: 'uploaded-a', name },
+      loaded: false,
+      isEnabled: false,
+    });
+
+    beforeEach(() => {
+      removeSpy = jasmine.createSpy('removeUploadedPlugin').and.resolveTo();
+      Object.assign(TestBed.inject(PluginService), { removeUploadedPlugin: removeSpy });
+    });
+
+    it('asks in the app dialog, then removes the plugin', async () => {
+      const openSpy = stubConfirmDialog(true);
+
+      await component.removeUploadedPlugin(uploadedPlugin('My Plugin'));
+
+      expect(openSpy).toHaveBeenCalledOnceWith(DialogConfirmComponent, {
+        restoreFocus: true,
+        data: {
+          message: T.PLUGINS.CONFIRM_REMOVE,
+          translateParams: { name: 'My Plugin' },
+          okTxt: T.PLUGINS.REMOVE,
+        },
+      });
+      expect(removeSpy).toHaveBeenCalledOnceWith('uploaded-a');
+    });
+
+    it('escapes HTML in the plugin name, which comes from the uploaded ZIP', async () => {
+      const openSpy = stubConfirmDialog(false);
+
+      await component.removeUploadedPlugin(uploadedPlugin('<b>Evil</b>'));
+
+      const config = openSpy.calls.mostRecent().args[1] as {
+        data: { translateParams: { name: string } };
+      };
+      expect(config.data.translateParams.name).toBe('&lt;b&gt;Evil&lt;/b&gt;');
+    });
+
+    it('keeps the plugin when the user cancels', async () => {
+      stubConfirmDialog(false);
+
+      await component.removeUploadedPlugin(uploadedPlugin('My Plugin'));
+
+      expect(removeSpy).not.toHaveBeenCalled();
+    });
+
+    it('keeps the plugin when the dialog is dismissed with Esc or the backdrop', async () => {
+      stubConfirmDialog(undefined);
+
+      await component.removeUploadedPlugin(uploadedPlugin('My Plugin'));
+
+      expect(removeSpy).not.toHaveBeenCalled();
     });
   });
 });
