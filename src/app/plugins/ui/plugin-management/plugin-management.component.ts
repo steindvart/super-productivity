@@ -37,7 +37,6 @@ import { PluginBridgeService } from '../../plugin-bridge.service';
 import { CollapsibleComponent } from '../../../ui/collapsible/collapsible.component';
 import { LanguageCode } from '../../../core/locale.constants';
 import { GlobalConfigService } from '../../../features/config/global-config.service';
-import { confirmDialog } from '../../../util/native-dialogs';
 import { escapeHtml } from '../../../util/escape-html';
 import { DialogConfirmComponent } from '../../../ui/dialog-confirm/dialog-confirm.component';
 import { firstValueFrom } from 'rxjs';
@@ -225,14 +224,12 @@ export class PluginManagementComponent {
     );
     if (attachedProviders.length > 0) {
       if (
-        !confirmDialog(
-          this._translateService.instant(T.PLUGINS.CONFIRM_DISABLE_WITH_ISSUE_PROVIDERS, {
-            count: attachedProviders.length,
-            name: plugin.manifest.name,
-          }),
-        )
+        !(await this._confirmInDialog(T.PLUGINS.CONFIRM_DISABLE_WITH_ISSUE_PROVIDERS, {
+          count: attachedProviders.length,
+          name: escapeHtml(plugin.manifest.name),
+        }))
       ) {
-        // Reset toggle back to enabled since user cancelled
+        // The toggle switched itself off on click; turn it back on since the user cancelled
         event.source.checked = true;
         return;
       }
@@ -413,7 +410,7 @@ export class PluginManagementComponent {
   private async _confirmInDialog(
     message: string,
     translateParams: Record<string, string | number>,
-    okTxt: string,
+    okTxt?: string,
   ): Promise<boolean> {
     const result = await firstValueFrom(
       this._dialog

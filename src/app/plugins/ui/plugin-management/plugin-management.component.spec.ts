@@ -1,6 +1,7 @@
 import { signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSlideToggleChange } from '@angular/material/slide-toggle';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { TranslateModule } from '@ngx-translate/core';
@@ -436,6 +437,89 @@ describe('PluginManagementComponent', () => {
       await component.removeUploadedPlugin(uploadedPlugin('My Plugin'));
 
       expect(removeSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('disabling a plugin with attached issue providers', () => {
+    let disableSpy: jasmine.Spy;
+    let issueProviders: WritableSignal<{ id: string; pluginId?: string }[]>;
+
+    const plugin: PluginInstance = {
+      manifest: { ...baseManifest, name: '<i>GitHub</i>', type: 'issueProvider' },
+      loaded: true,
+      isEnabled: true,
+    };
+
+    // MatSlideToggle has already flipped itself off when (change) fires.
+    const toggleOffEvent = (): MatSlideToggleChange =>
+      ({ checked: false, source: { checked: false } }) as unknown as MatSlideToggleChange;
+
+    // onPluginToggle does not return the disable promise; let it settle.
+    const toggleOff = async (event: MatSlideToggleChange): Promise<void> => {
+      component.onPluginToggle(plugin, event);
+      await new Promise((resolve) => setTimeout(resolve));
+    };
+
+    beforeEach(() => {
+      disableSpy = jasmine.createSpy('disablePlugin').and.resolveTo();
+      Object.assign(TestBed.inject(PluginService), { disablePlugin: disableSpy });
+      issueProviders = signal([
+        { id: 'ip-1', pluginId: baseManifest.id },
+        { id: 'ip-2', pluginId: baseManifest.id },
+        { id: 'ip-3', pluginId: 'other-plugin' },
+      ]);
+      // The component reads the providers once at construction, so build it again
+      // with a Store that returns them.
+      Object.assign(TestBed.inject(Store), { selectSignal: () => issueProviders });
+      component = TestBed.createComponent(PluginManagementComponent).componentInstance;
+    });
+
+    it('asks in the app dialog with the provider count and escaped name, then disables', async () => {
+      const openSpy = stubConfirmDialog(true);
+      const event = toggleOffEvent();
+
+      await toggleOff(event);
+
+      expect(openSpy).toHaveBeenCalledOnceWith(DialogConfirmComponent, {
+        restoreFocus: true,
+        data: {
+          message: T.PLUGINS.CONFIRM_DISABLE_WITH_ISSUE_PROVIDERS,
+          translateParams: { count: 2, name: '&lt;i&gt;GitHub&lt;/i&gt;' },
+          okTxt: undefined,
+        },
+      });
+      expect(disableSpy).toHaveBeenCalledOnceWith(baseManifest.id);
+      expect(event.source.checked).toBe(false);
+    });
+
+    it('turns the toggle back on and keeps the plugin enabled when the user cancels', async () => {
+      stubConfirmDialog(false);
+      const event = toggleOffEvent();
+
+      await toggleOff(event);
+
+      expect(disableSpy).not.toHaveBeenCalled();
+      expect(event.source.checked).toBe(true);
+    });
+
+    it('turns the toggle back on when the dialog is dismissed with Esc or the backdrop', async () => {
+      stubConfirmDialog(undefined);
+      const event = toggleOffEvent();
+
+      await toggleOff(event);
+
+      expect(disableSpy).not.toHaveBeenCalled();
+      expect(event.source.checked).toBe(true);
+    });
+
+    it('disables without asking when no issue provider uses the plugin', async () => {
+      const openSpy = stubConfirmDialog(false);
+      issueProviders.set([{ id: 'ip-3', pluginId: 'other-plugin' }]);
+
+      await toggleOff(toggleOffEvent());
+
+      expect(openSpy).not.toHaveBeenCalled();
+      expect(disableSpy).toHaveBeenCalledOnceWith(baseManifest.id);
     });
   });
 });
