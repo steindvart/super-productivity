@@ -516,12 +516,9 @@ export class PluginManagementComponent {
     } catch (error) {
       PluginLog.err('Failed to open config dialog:', error);
       // A snack, not `uploadError`: that one renders in the "Install Plugin" card,
-      // far from the plugin whose settings button was clicked.
-      this._snackService.open(
-        error instanceof Error
-          ? { type: 'ERROR', msg: error.message, isSkipTranslate: true }
-          : { type: 'ERROR', msg: T.PLUGINS.FAILED_TO_LOAD_CONFIG },
-      );
+      // far from the plugin whose settings button was clicked. The thrown messages
+      // are untranslated developer text, so they stay in the log above.
+      this._snackService.open({ type: 'ERROR', msg: T.PLUGINS.FAILED_TO_LOAD_CONFIG });
     }
   }
 
