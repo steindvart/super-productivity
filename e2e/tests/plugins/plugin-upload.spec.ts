@@ -274,11 +274,6 @@ test.describe.serial('Plugin Upload', () => {
     expect(reEnabledStatus).toBe(true);
 
     // Remove uploaded plugin
-    // Handle confirmation dialog - set up before triggering the dialog
-    page.once('dialog', async (dialog) => {
-      await dialog.accept();
-    });
-
     await page.evaluate((pluginId: string) => {
       const items = Array.from(document.querySelectorAll('plugin-management mat-card'));
       const pluginCard = items.find((item) => item.textContent?.includes(pluginId));
@@ -291,6 +286,12 @@ test.describe.serial('Plugin Upload', () => {
       }
       return false;
     }, TEST_PLUGIN_ID);
+
+    // Confirm in the app's confirmation dialog
+    const confirmDialog = page.locator('dialog-confirm');
+    await confirmDialog.waitFor({ state: 'visible', timeout: 5000 });
+    await confirmDialog.locator('button[e2e="confirmBtn"]').click();
+    await confirmDialog.waitFor({ state: 'hidden', timeout: 5000 });
 
     // Wait for plugin to be removed from the list
     await page.waitForFunction(
