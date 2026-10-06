@@ -318,7 +318,7 @@ describe('PluginManagementComponent', () => {
       );
       const translate = TestBed.inject(TranslateService);
       translate.setTranslation('en', {
-        PLUGINS: { CONFIRM_CLEAR_CACHE: 'Remove {{count}} uploaded plugins?' },
+        PLUGINS: { CONFIRM_CLEAR_CACHE: 'Remove uploaded plugins ({{count}})?' },
       });
       translate.use('en');
     });
@@ -335,7 +335,7 @@ describe('PluginManagementComponent', () => {
 
       await component.clearPluginCache();
 
-      expect(confirmSpy).toHaveBeenCalledOnceWith('Remove 2 uploaded plugins?');
+      expect(confirmSpy).toHaveBeenCalledOnceWith('Remove uploaded plugins (2)?');
       expect(clearCacheSpy).toHaveBeenCalledTimes(1);
       expect(clearUploadedSpy).toHaveBeenCalledTimes(1);
     });
