@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { GlobalConfigService } from '../../../features/config/global-config.service';
 import { SnackService } from '../../../core/snack/snack.service';
 import { LayoutService } from '../../../core-ui/layout/layout.service';
@@ -11,7 +11,7 @@ import { PluginBridgeService } from '../../plugin-bridge.service';
 import { PluginCacheService } from '../../plugin-cache.service';
 import { PluginConfigService } from '../../plugin-config.service';
 import { PluginMetaPersistenceService } from '../../plugin-meta-persistence.service';
-import { PluginManifest, PluginHooks } from '../../plugin-api.model';
+import { PluginInstance, PluginManifest, PluginHooks } from '../../plugin-api.model';
 import { PluginService } from '../../plugin.service';
 import { PluginManagementComponent } from './plugin-management.component';
 import { T } from '../../../t.const';
@@ -279,5 +279,63 @@ describe('PluginManagementComponent', () => {
 
     expect(routerNavigateSpy).toHaveBeenCalledWith(['/active/tasks']);
     expect(layoutToggleSpy).not.toHaveBeenCalled();
+  });
+
+  describe('getPluginLanguages', () => {
+    const pluginWithLanguages = (languages?: string[]): PluginInstance => ({
+      manifest: {
+        ...baseManifest,
+        ...(languages ? { i18n: { languages } } : {}),
+      },
+      loaded: true,
+      isEnabled: true,
+    });
+
+    it('names the languages in the UI language', () => {
+      TestBed.inject(TranslateService).use('de');
+
+      expect(component.getPluginLanguages(pluginWithLanguages(['de', 'fr']))).toBe(
+        'Deutsch, Französisch',
+      );
+    });
+
+    it('names English in the UI language for plugins without languages', () => {
+      TestBed.inject(TranslateService).use('de');
+
+      expect(component.getPluginLanguages(pluginWithLanguages())).toBe('Englisch');
+      expect(component.getPluginLanguages(pluginWithLanguages([]))).toBe('Englisch');
+      expect(component.getPluginLanguages(pluginWithLanguages(['en']))).toBe('Englisch');
+    });
+
+    it('names app locale codes with a region or script', () => {
+      TestBed.inject(TranslateService).use('en');
+
+      expect(
+        component.getPluginLanguages(
+          pluginWithLanguages(['pt-br', 'ro-md', 'zh', 'zh-tw']),
+        ),
+      ).toBe(
+        'Portuguese (Brazil), Romanian (Moldova), Chinese (Simplified), Chinese (Traditional)',
+      );
+    });
+
+    it('follows a UI language switch without recreating the component', () => {
+      const translateService = TestBed.inject(TranslateService);
+      const plugin = pluginWithLanguages(['fr']);
+
+      translateService.use('en');
+      expect(component.getPluginLanguages(plugin)).toBe('French');
+
+      translateService.use('de');
+      expect(component.getPluginLanguages(plugin)).toBe('Französisch');
+    });
+
+    it('falls back to the raw code for an invalid language code', () => {
+      TestBed.inject(TranslateService).use('de');
+
+      expect(
+        component.getPluginLanguages(pluginWithLanguages(['de', 'not a code!'])),
+      ).toBe('Deutsch, not a code!');
+    });
   });
 });
