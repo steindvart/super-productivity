@@ -1,9 +1,9 @@
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { GlobalConfigService } from '../../../features/config/global-config.service';
 import { SnackService } from '../../../core/snack/snack.service';
 import { LayoutService } from '../../../core-ui/layout/layout.service';
@@ -19,6 +19,7 @@ import { T } from '../../../t.const';
 type PluginManifestWithAuthor = PluginManifest & { author?: string };
 
 describe('PluginManagementComponent', () => {
+  let fixture: ComponentFixture<PluginManagementComponent>;
   let component: PluginManagementComponent;
   let routerNavigateSpy: jasmine.Spy;
   let layoutToggleSpy: jasmine.Spy;
@@ -87,7 +88,8 @@ describe('PluginManagementComponent', () => {
       ],
     });
 
-    component = TestBed.createComponent(PluginManagementComponent).componentInstance;
+    fixture = TestBed.createComponent(PluginManagementComponent);
+    component = fixture.componentInstance;
   });
 
   it('returns trimmed plugin author from the manifest', () => {
@@ -263,6 +265,65 @@ describe('PluginManagementComponent', () => {
     });
 
     expect(title).toBe('PLUGINS.HOOKS (1)');
+  });
+
+  describe('community plugins card', () => {
+    const normalize = (text: string | null | undefined): string =>
+      (text ?? '').replace(/\s+/g, ' ').trim();
+
+    beforeEach(() => {
+      // A non-English language whose AUTHORED_BY puts the author first, so the
+      // test also covers translations that do not start with "by".
+      const translateService = TestBed.inject(TranslateService);
+      translateService.setTranslation('tr', {
+        PLUGINS: {
+          AUTHORED_BY: '{{author}} tarafından',
+          COMMUNITY_PLUGINS_ADD_YOURS: 'Eklentinizi burada listeleyin',
+          COMMUNITY_PLUGINS_STARS: '{{count}} yıldız',
+          COMMUNITY_PLUGINS_TITLE: 'Topluluk eklentileri',
+          COMMUNITY_PLUGINS_WARNING: 'Topluluk eklentileri incelenmez.',
+        },
+      });
+      translateService.use('tr');
+      fixture.detectChanges();
+    });
+
+    const card = (): HTMLElement =>
+      fixture.nativeElement.querySelector('.community-plugins-card');
+
+    it('translates the title, warning and add-your-plugin link', () => {
+      expect(normalize(card().querySelector('mat-card-title')?.textContent)).toBe(
+        'Topluluk eklentileri',
+      );
+      expect(normalize(card().querySelector('.install-warning span')?.textContent)).toBe(
+        'Topluluk eklentileri incelenmez.',
+      );
+      const addYoursLink = card().querySelector<HTMLAnchorElement>(
+        'a[href$="community-plugins.json"]',
+      );
+      expect(normalize(addYoursLink?.textContent)).toBe(
+        'add Eklentinizi burada listeleyin',
+      );
+    });
+
+    it('renders the translated author line with the author as a link', () => {
+      const plugin = component.communityPlugins()[0];
+      const authorLine = card().querySelector(
+        '.community-plugin-item .plugin-author > span',
+      );
+      const authorLink = authorLine?.querySelector('a');
+
+      expect(normalize(authorLine?.textContent)).toBe(`${plugin.author} tarafından`);
+      expect(authorLink?.getAttribute('href')).toBe(plugin.authorUrl ?? null);
+      expect(normalize(authorLink?.textContent)).toBe(plugin.author);
+    });
+
+    it('translates the stars label', () => {
+      const plugin = component.communityPlugins()[0];
+      const stars = card().querySelector('.community-plugin-item .plugin-stars');
+
+      expect(stars?.getAttribute('aria-label')).toBe(`${plugin.stars} yıldız`);
+    });
   });
 
   it('navigates to the work view and opens the issue panel', async () => {
