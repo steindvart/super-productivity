@@ -270,6 +270,14 @@ describe('PluginManagementComponent', () => {
   describe('community plugins card', () => {
     const normalize = (text: string | null | undefined): string =>
       (text ?? '').replace(/\s+/g, ' ').trim();
+    const plugin = {
+      name: 'X',
+      shortDescription: '',
+      url: 'https://example.com',
+      author: 'someone',
+      authorUrl: 'https://example.com/someone',
+      stars: 3,
+    };
 
     beforeEach(() => {
       // A non-English language whose AUTHORED_BY puts the author first, so the
@@ -285,6 +293,9 @@ describe('PluginManagementComponent', () => {
         },
       });
       translateService.use('tr');
+      // A fixture instead of the real community-plugins.json, whose first entry
+      // may lack the optional authorUrl or stars.
+      component.communityPlugins.set([plugin]);
       fixture.detectChanges();
     });
 
@@ -307,19 +318,17 @@ describe('PluginManagementComponent', () => {
     });
 
     it('renders the translated author line with the author as a link', () => {
-      const plugin = component.communityPlugins()[0];
       const authorLine = card().querySelector(
         '.community-plugin-item .plugin-author > span',
       );
       const authorLink = authorLine?.querySelector('a');
 
       expect(normalize(authorLine?.textContent)).toBe(`${plugin.author} tarafından`);
-      expect(authorLink?.getAttribute('href')).toBe(plugin.authorUrl ?? null);
+      expect(authorLink?.getAttribute('href')).toBe(plugin.authorUrl);
       expect(normalize(authorLink?.textContent)).toBe(plugin.author);
     });
 
     it('translates the stars label', () => {
-      const plugin = component.communityPlugins()[0];
       const stars = card().querySelector('.community-plugin-item .plugin-stars');
 
       expect(stars?.getAttribute('aria-label')).toBe(`${plugin.stars} yıldız`);
