@@ -1148,9 +1148,9 @@
     },
     "SEARCH_BAR": {
       "INCLUDE_COMPLETED": "Include completed and archived tasks",
-      "INFO": "Start typing to search for tasks or notes",
-      "NO_RESULTS": "No tasks or notes found matching your search",
-      "PLACEHOLDER": "Search for task, task notes or project notes"
+      "INFO": "Start typing to search for tasks, notes, projects or tags",
+      "NO_RESULTS": "No tasks, notes, projects or tags found matching your search",
+      "PLACEHOLDER": "Search for tasks, notes, projects or tags"
     },
     "SIMPLE_COUNTER": {
       "D_CONFIRM_REMOVE": {
@@ -1859,7 +1859,10 @@
         "ADD_TIME": "Add time",
         "REMIND_AT": "Remind at",
         "REMOVE_DEADLINE": "Remove deadline",
+        "RO_1D": "1 day before",
         "RO_1H": "1 hour before",
+        "RO_1W": "1 week before",
+        "RO_3D": "3 days before",
         "RO_5M": "5 minutes before",
         "RO_10M": "10 minutes before",
         "RO_15M": "15 minutes before",
@@ -3129,6 +3132,7 @@
     "CODE_TOO_LARGE": "Plugin code is too large (max {{maxSize}}MB)",
     "CONFIGURATION": "Configuration",
     "CONFIGURE": "Configure",
+    "CONFIRM_CLEAR_CACHE": "Remove uploaded plugins ({{count}})? Their saved secrets, connected accounts and Node.js execution permissions will be deleted too. Bundled plugins are not affected.",
     "CONFIRM_DISABLE_WITH_ISSUE_PROVIDERS": "This plugin provides issue integration that is currently in use ({{count}} issue provider(s)). Disabling it will temporarily break issue syncing for those providers until the plugin is re-enabled. Are you sure you want to disable \"{{name}}\"?",
     "CONFIRM_REMOVE": "Are you sure you want to remove the plugin \"{{name}}\"?",
     "ELECTRON_API_NOT_AVAILABLE": "Electron API is not available",

@@ -238,9 +238,8 @@ export class TaskContextMenuInnerComponent implements AfterViewInit, OnDestroy {
     this.isInSubTaskList = !!this._elementRef.nativeElement.closest('.sub-tasks');
     const host = this._elementRef.nativeElement as HTMLElement;
     this.isInTaskRow =
-      !!host.closest(
-        'task, [data-board-selection-scope] planner-task[data-task-selectable="true"]',
-      ) && !host.closest('task-detail-panel');
+      !!host.closest('task, planner-task[data-task-selectable="true"]') &&
+      !host.closest('task-detail-panel');
 
     setTimeout(() => {
       if (!this._isOpenedFromKeyboard) {
@@ -513,6 +512,7 @@ export class TaskContextMenuInnerComponent implements AfterViewInit, OnDestroy {
           data: {
             okTxt: T.F.TASK.D_CONFIRM_DELETE.OK,
             message: T.F.TASK.D_CONFIRM_DELETE.MSG,
+            isFocusConfirm: true,
             translateParams: { title: this.task.title },
           },
         })
