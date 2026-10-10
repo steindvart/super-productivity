@@ -3136,6 +3136,7 @@
     "COMMUNITY_PLUGINS_WARNING": "These plugins are developed by the community and are NOT reviewed or guaranteed by the Super Productivity team. Install and use them at your own risk — they might contain malicious code or break your application.",
     "CONFIGURATION": "Configuration",
     "CONFIGURE": "Configure",
+    "CONFIRM_CLEAR_CACHE": "Remove uploaded plugins ({{count}})? Their saved secrets, connected accounts and Node.js execution permissions will be deleted too. Bundled plugins are not affected.",
     "CONFIRM_DISABLE_WITH_ISSUE_PROVIDERS": "This plugin provides issue integration that is currently in use ({{count}} issue provider(s)). Disabling it will temporarily break issue syncing for those providers until the plugin is re-enabled. Are you sure you want to disable \"{{name}}\"?",
     "CONFIRM_REMOVE": "Are you sure you want to remove the plugin \"{{name}}\"?",
     "ELECTRON_API_NOT_AVAILABLE": "Electron API is not available",

@@ -97,7 +97,7 @@ jobs:
           SYNC_UTILITY_PATHS='src/app/core/date/date\.service\.ts$|src/app/core/util/|src/app/util/(get-db-date-str|is-today\.util|start-of-next-day\.util|local-actions\.token|skip-during-sync(-window)?\.operator|wait-for-sync-window\.operator)\.ts$'
           COMMON="src/app/imex/sync/|src/app/op-log/|src/app/pfapi/|src/app/root-store/|src/app/features/[^/]+/store/|${PERSISTENT_ACTION_PATHS}|${SYNC_UTILITY_PATHS}|packages/sync-providers/|packages/sync-core/|packages/shared-schema/|docker-compose\.yaml$|e2e/tests/sync/|e2e/helpers/|e2e/pages/|e2e/fixtures/|e2e/constants/|e2e/utils/|e2e/playwright\.config\.ts$|e2e/global-setup\.ts$|\.github/workflows/e2e-sync-pr\.yml$"
           # SuperSync also depends on the server package and its compose override.
-          SUPERSYNC_PATTERN="^(${COMMON}|packages/super-sync-server/|docker-compose\.supersync\.yaml\$)"
+          SUPERSYNC_PATTERN="^(${COMMON}|packages/super-sync-server/|docker-compose\.supersync\.yaml\$|e2e/webdav-server/|scripts/wait-for-webdav\.sh\$)"
           # WebDAV also depends on its E2E server image and precondition probe.
           WEBDAV_PATTERN="^(${COMMON}|e2e/webdav-server/|scripts/wait-for-webdav\.sh\$)"
           # The sync fuzz harness runs client sync code only, not the E2E helpers.
@@ -123,7 +123,10 @@ jobs:
     name: Build Frontend
     needs: detect
     if: needs.detect.outputs.supersync == 'true' || needs.detect.outputs.webdav == 'true'
-    runs-on: ubuntu-latest
+    # Owner PRs run E2E on sponsored Blacksmith runners for faster feedback; everything else
+    # stays on GitHub. Repo variable USE_BLACKSMITH is the kill switch (unset = GitHub only);
+    # unset it if these jobs sit queued (app uninstalled or sponsorship ended).
+    runs-on: ${{ vars.USE_BLACKSMITH == 'true' && github.event.pull_request.user.login == 'johannesjo' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }}
     timeout-minutes: 15
     env:
       UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
@@ -160,7 +163,7 @@ jobs:
     name: SuperSync E2E ${{ matrix.shard }}/6
     needs: [detect, build]
     if: needs.detect.outputs.supersync == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_BLACKSMITH == 'true' && github.event.pull_request.user.login == 'johannesjo' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -186,6 +189,20 @@ jobs:
 
       - name: Create .env file for Docker Compose
         run: cp .env.example .env
+
+      - name: Configure Docker Hub mirror
+        # Cached pulls avoid Docker Hub's shared-runner rate limit (#10633).
+        # Preserve the runner's other daemon settings; cache misses use Docker Hub.
+        shell: bash
+        run: |
+          if [ -f /etc/docker/daemon.json ]; then
+            sudo cat /etc/docker/daemon.json
+          else
+            echo '{}'
+          fi | jq '.["registry-mirrors"] = ["https://mirror.gcr.io"]' > "$RUNNER_TEMP/docker-daemon.json"
+          sudo mkdir -p /etc/docker
+          sudo cp "$RUNNER_TEMP/docker-daemon.json" /etc/docker/daemon.json
+          sudo systemctl restart docker
 
       - name: Start Sync Docker Services
         # Retry to survive transient Docker Hub pull / Alpine mirror failures.
@@ -238,7 +255,7 @@ jobs:
     name: WebDAV E2E
     needs: [detect, build]
     if: needs.detect.outputs.webdav == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_BLACKSMITH == 'true' && github.event.pull_request.user.login == 'johannesjo' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }}
     timeout-minutes: 30
     env:
       UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
@@ -260,6 +277,20 @@ jobs:
 
       - name: Create .env file for Docker Compose
         run: cp .env.example .env
+
+      - name: Configure Docker Hub mirror
+        # Cached pulls avoid Docker Hub's shared-runner rate limit (#10633).
+        # Preserve the runner's other daemon settings; cache misses use Docker Hub.
+        shell: bash
+        run: |
+          if [ -f /etc/docker/daemon.json ]; then
+            sudo cat /etc/docker/daemon.json
+          else
+            echo '{}'
+          fi | jq '.["registry-mirrors"] = ["https://mirror.gcr.io"]' > "$RUNNER_TEMP/docker-daemon.json"
+          sudo mkdir -p /etc/docker
+          sudo cp "$RUNNER_TEMP/docker-daemon.json" /etc/docker/daemon.json
+          sudo systemctl restart docker
 
       - name: Start WebDAV Docker Service
         # Retry to survive transient Docker Hub pull timeouts / rate limits.
