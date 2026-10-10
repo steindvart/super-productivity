@@ -1,6 +1,7 @@
 import { test, expect } from '../../fixtures/test.fixture';
 import * as path from 'path';
 import { cssSelectors } from '../../constants/selectors';
+import { waitForPluginManagementInit } from '../../helpers/plugin-test.helpers';
 
 const { SETTINGS_BTN } = cssSelectors;
 
@@ -316,5 +317,36 @@ test.describe.serial('Plugin Upload', () => {
 
     // console.log('Removal verification:', removalResult);
     expect(removalResult.removed).toBeTruthy();
+  });
+
+  test('clear plugin cache asks before removing uploaded plugins', async ({ page }) => {
+    test.setTimeout(process.env.CI ? 90000 : 60000);
+    expect(await waitForPluginManagementInit(page)).toBe(true);
+
+    await page
+      .locator(FILE_INPUT)
+      .setInputFiles(path.resolve(__dirname, '../../../src/assets/test-plugin.zip'));
+    const uploadedCard = page.locator('plugin-management mat-card', {
+      hasText: TEST_PLUGIN_ID,
+    });
+    await expect(uploadedCard).toBeVisible({ timeout: 15000 });
+
+    const clearCacheBtn = page.locator('plugin-management button', {
+      hasText: 'Clear Plugin Cache',
+    });
+    const confirmDialog = page.locator('dialog-confirm');
+
+    // Cancel keeps the uploaded plugin
+    await clearCacheBtn.click();
+    await expect(confirmDialog).toContainText('Remove uploaded plugins (1)?');
+    await confirmDialog.locator('button', { hasText: 'Cancel' }).click();
+    await expect(confirmDialog).toBeHidden();
+    await expect(uploadedCard).toBeVisible();
+
+    // Confirm removes it
+    await clearCacheBtn.click();
+    await confirmDialog.locator('button[e2e="confirmBtn"]').click();
+    await expect(confirmDialog).toBeHidden();
+    await expect(uploadedCard).toHaveCount(0, { timeout: 15000 });
   });
 });
