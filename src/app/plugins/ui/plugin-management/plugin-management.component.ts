@@ -38,6 +38,7 @@ import { CollapsibleComponent } from '../../../ui/collapsible/collapsible.compon
 import { LanguageCode } from '../../../core/locale.constants';
 import { GlobalConfigService } from '../../../features/config/global-config.service';
 import { escapeHtml } from '../../../util/escape-html';
+import { getUploadedPluginIds } from '../../plugin-state.model';
 import { DialogConfirmComponent } from '../../../ui/dialog-confirm/dialog-confirm.component';
 import { firstValueFrom } from 'rxjs';
 import { Store } from '@ngrx/store';
@@ -330,9 +331,7 @@ export class PluginManagementComponent {
   async clearPluginCache(): Promise<void> {
     // Counts the same plugins clearUploadedPluginsFromMemory removes. With none
     // installed, nothing visible is lost, so the cache is cleared without asking.
-    const uploadedCount = Array.from(this._pluginService.pluginStates().values()).filter(
-      (state) => state.type === 'uploaded',
-    ).length;
+    const uploadedCount = getUploadedPluginIds(this._pluginService.pluginStates()).length;
     if (
       uploadedCount > 0 &&
       !(await this._confirmInDialog(
