@@ -967,7 +967,7 @@ the app. To be listed, open a PR that adds an entry:
 ```
 
 - `id` and `release` are optional. Without them the entry links to your page and
-  users install the ZIP by hand (Settings → Plugins → Community → Install from file…).
+  users install the ZIP by hand (Settings → Plugins → Community → Install from file).
 - `id` must equal the `id` in your `manifest.json`. With it, the list shows
   **Installed** for users who have the plugin.
 - With `release`, the list shows an **Install** button. The app downloads

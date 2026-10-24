@@ -39,12 +39,23 @@ td {
   }
 }
 
+// A toolbar between two lines: the tab bar above and its own bottom line. The extra
+// space on top makes up for the active tab and its indicator, which make an equal gap
+// look tighter above than below. The content below starts as far from the bottom line
+// as it does from the tab bar in the other tabs.
 .community-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--s) var(--s2);
+  padding-top: var(--s-half);
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--separator-color);
+}
+
+.community-header + .group-title {
+  margin-top: var(--s2);
 }
 
 .community-header-actions {

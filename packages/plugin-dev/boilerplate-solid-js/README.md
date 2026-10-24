@@ -363,7 +363,7 @@ Modify `src/app/App.css` to customize the appearance.
 3. Upload the ZIP file to Super Productivity:
    - Open Super Productivity
    - Go to Settings → Plugins → Community
-   - Click "Install from file…"
+   - Click "Install from file"
    - Select your ZIP file
 
 ## Troubleshooting

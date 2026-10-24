@@ -316,7 +316,7 @@ describe('PluginManagementComponent', () => {
           COMMUNITY_PLUGINS: 'Topluluk eklentileri',
           COMMUNITY_WARNING: 'Topluluk eklentileri incelenmez.',
           GROUP_UPLOADED: 'Yüklenen eklentiler',
-          INSTALL_FROM_FILE: 'Dosyadan yükle…',
+          INSTALL_FROM_FILE: 'Dosyadan yükle',
           REMOVE_ALL_UPLOADED_PLUGINS: 'Yüklenen tüm eklentileri kaldır',
         },
       });
@@ -385,7 +385,7 @@ describe('PluginManagementComponent', () => {
       const header = card().querySelector('.community-header');
       const installButton = header?.querySelector('.community-header-actions button');
 
-      expect(normalize(installButton?.textContent)).toBe('upload Dosyadan yükle…');
+      expect(normalize(installButton?.textContent)).toBe('upload Dosyadan yükle');
       expect(header?.querySelector('.community-menu-btn')).not.toBeNull();
       expect(card().querySelector('mat-card')).toBeNull();
     });

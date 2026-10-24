@@ -3397,7 +3397,7 @@
     "ICON_TOO_LARGE": "Plugin icon is too large (max {{maxSize}}KB)",
     "INDEX_HTML_NOT_LOADED": "Plugin index.html not loaded",
     "INDEX_HTML_TOO_LARGE": "Plugin index.html is too large (max {{maxSize}}KB)",
-    "INSTALL_FROM_FILE": "Install from file…",
+    "INSTALL_FROM_FILE": "Install from file",
     "INSTALL_PLUGIN": "Install Plugin",
     "INSTALLING": "Installing...",
     "LANGUAGES": "Languages:",
